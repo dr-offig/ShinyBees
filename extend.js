@@ -7,6 +7,17 @@ shinyjs.seek = function(params) {
 };
 
 
+
+//shinyjs.currentPage = function(tbl) {
+//  return tbl.page();
+//};
+
+//shinyjs.setCurrentPage = function(tbl, pageNum) {
+//  tbl.page(pageNum).draw('page');
+//};
+
+
+
 //shinyjs.listenForDelete = function(params) {
 //  var defaultParams = {
 //    tablename : 'commentsTable'
