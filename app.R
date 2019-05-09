@@ -12,8 +12,13 @@ library(shinyjs)
 library(DT)
 library(videoR)
 library(hms)
-source('R/audio_analysis.R')
+#source('R/audio_analysis.R')
 
+# registerInputHandler("videoR.markers",
+#   function(x, session, inputname) 
+#   { 
+#     lapply(x, function(a) { lapply(a, function(b){ if(is.null(b)) NA else b })})
+#   })
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -45,8 +50,11 @@ ui <- fluidPage(
         column(6, DT::dataTableOutput("avrecordsTable")),
         column(6, 
           fluidRow(
-            column(10,
+            column(5,
               textInput("defaultComment", label="Default comment", value="--")),
+            column(5,
+                   selectInput("defaultColour", label="Default colour", 
+                               choices=c("indianred","darkgreen","darkslateblue","hotpink"))),
             column(2, actionButton("deleteSelectedRow","Delete"))
           )))),
     column(4, DT::dataTableOutput("commentsTable"))
@@ -60,9 +68,16 @@ server <- function(input, output, session) {
   #avrecord <- avrecords[[1]]
   
   # utility functions
-  formatMarkers <- function(cm) { data.frame("time"=as.numeric(cm$time), "comment"=cm$comment)}
+  formatMarkers <- function(cm) { data.frame("timeA"=as.numeric(cm$timeA), "timeB"=as.numeric(cm$timeB), 
+                                             "type"=cm$type, "colour"=cm$colour, "comment"=cm$comment)}
   
-  
+  safeHMS <- function(erp) { if(is.null(erp) || is.na(erp)) NA else as.hms(erp) }
+    
+  # sanitiseComment <- function(x, session, inputname) { 
+  #   print(x)
+  #   x 
+  # }
+  # 
   # rv <- reactiveValues(rec=avrecords[[1]], 
   #                      commentsFile=paste0('www/data/',rec,'/',rec,'.csv'),
   #                      commentsLogFile=paste0('www/data/',rec,'/',rec,'_log.csv'),
@@ -74,7 +89,7 @@ server <- function(input, output, session) {
   selectedAVRecord <- reactive({
     indices = input$avrecordsTable_rows_selected
     if (length(indices) > 0) {
-      avrecords$recordname[[last(indices)]]
+      avrecords$recordname[[indices[[length(indices)]]]]
     } else {
       avrecords$recordname[[1]]
     }
@@ -92,19 +107,22 @@ server <- function(input, output, session) {
   
   videoFile <- reactive({
     rec <- selectedAVRecord()
-    #paste0('https://offig.net/video/bees/', rec, '.mp4')
-    paste0('http://localhost:8080/www/data/', rec,'/',rec, '.mp4')
+    paste0('https://offig.net/video/bees/', rec, '.mp4')
+    #paste0('http://localhost:8080/www/data/', rec,'/',rec, '.mp4')
   })
 
   parseComments <- function(somefile) {
     if (file.exists(somefile)) {
       data <- read.csv(somefile, header=TRUE, stringsAsFactors = FALSE)
       if (nrow(data) > 0) {
-        data$time <- as.hms(data$time)
+        data$timeA <- safeHMS(data$timeA)
+        data$timeB <- safeHMS(data$timeB)
       }
     } else {
-      data <- data.frame(time=numeric(0), comment=character(0))
-      write.csv(data,somefile,row.names = FALSE)
+      data <- data.frame(timeA=numeric(0), timeB=numeric(0), type=character(0), colour=character(0), comment=character(0))
+      write.csv(data, somefile, quote=FALSE, row.names = FALSE)
+      data$timeA <- as.hms(data$timeA)
+      data$timeB <- as.hms(data$timeB)
     }
     return(data)
   }
@@ -117,7 +135,7 @@ server <- function(input, output, session) {
     formatMarkers(comments())
   })
   
-  commentsProxy = dataTableProxy('commentsTable', deferUntilFlush=TRUE)
+  commentsProxy = dataTableProxy('commentsTable', deferUntilFlush=FALSE)
   #avrecordsProxy = dataTableProxy('avrecordsTable')
   
   observeEvent(input$commentsTable_cell_edit, {
@@ -125,23 +143,25 @@ server <- function(input, output, session) {
     # save table pagination
     saved_state <- input$commentsTable_state
     saved_page <- (saved_state$start / saved_state$length) + 1
-    print(sprintf("Saving page: %d ", saved_page))
+    # print(sprintf("Saving page: %d ", saved_page))
     # parse the new cell value
     info = input$commentsTable_cell_edit
     i <- info$row
     j <- info$col
     v <- info$value
     cm <- comments()
-    if (names(cm)[[j]] == "time") { cm[i, j] <- as.hms(v) }
+    if (names(cm)[[j]] == "timeA" || names(cm)[[j]] == "timeB") { cm[i, j] <- as.numeric(safeHMS(v)) }
     else { cm[i, j] <- DT::coerceValue(v, cm[i, j]) }
     #comments <- cm
-    cat(sprintf("setting comment for row: %d col: %d to value: %s\n",i,j,cm[i,j]))
+    cm <- cm[order(cm$timeA),]
+    #cat(sprintf("setting comment for row: %d col: %d to value: %s\n",i,j,cm[i,j]))
     #replaceData(commentsProxy, cm, resetPaging = FALSE)  # important
     file.append(commentsLogFile(), commentsFile())    
     write.csv(cm, commentsFile(), row.names=FALSE)
     session$sendCustomMessage(
       type = "updateMarkers", 
-      data.frame("time"=as.numeric(cm$time), "comment"=cm$comment))
+      data.frame("timeA"=as.numeric(cm$timeA), "timeB"=as.numeric(cm$timeB),
+                 "type"=cm$type, "colour"=cm$colour, "comment"=cm$comment))
     
     # restore saved state
     #reloadData(commentsProxy)
@@ -155,6 +175,13 @@ server <- function(input, output, session) {
       input$defaultComment)
   })
   
+  
+  observeEvent(input$defaultColour, {
+    session$sendCustomMessage(
+      type = "updateDefaultColour", 
+      input$defaultColour)
+  })
+  
   # observeEvent(input$avrecordsTable_rows_selected, {
   #   selectedIndex <- input$avrecordsTable_rows_selected
   #   rv$rec <- avrecords[[selectedIndex]]
@@ -165,7 +192,7 @@ server <- function(input, output, session) {
   observeEvent(input$commentsTable_rows_selected, {
       index = input$commentsTable_rows_selected
       cm <- comments()
-      js$seek("time"= as.numeric(cm$time[[index]]))
+      js$seek("time"= as.numeric(cm$timeA[[index]]))
       #updateNumericInput(session, "selectedCommentRow", value=index)
   })
 
@@ -180,30 +207,57 @@ server <- function(input, output, session) {
   
   observeEvent(input$deleteSelectedRow,{
     if (!is.null(input$commentsTable_rows_selected)) {
+      saved_state <- input$commentsTable_state
+      saved_page <- (saved_state$start / saved_state$length) + 1
+      
       cm <- comments()
       cm <- cm[-as.numeric(input$commentsTable_rows_selected),]
+      cm <- cm[order(cm$timeA),]
       #replaceData(commentsProxy, cm, resetPaging = FALSE)  # important
       file.append(commentsLogFile(), commentsFile())    
       write.csv(cm, commentsFile(), row.names=FALSE)
       session$sendCustomMessage(
         type = "updateMarkers", 
-        data.frame("time"=as.numeric(cm$time), "comment"=cm$comment))
+        data.frame("timeA"=as.numeric(cm$timeA), "timeB"=as.numeric(cm$timeB), 
+                   "type"=cm$type, "colour"=cm$colour, "comment"=cm$comment)
+      )
+      selectPage(commentsProxy,saved_page)
     }
   })
   
   
-  observeEvent(input$markers, {
+  observeEvent(input$videoR.markers, {
     
     #new_data <- data.frame("seconds.into.showreel"=input$markers$time, "comment"=input$markers$comment)
     #str(unlist(input$markers$time))
     #str(unlist(input$markers$comment))
-      cm <- comments()
-      cm <- merge(cm, data.frame("time"=unlist(input$markers$time), "comment"=unlist(input$markers$comment)), 
-                                             by=c("time","comment"), all=TRUE, sort=TRUE)
-      #replaceData(commentsProxy, cm, resetPaging = FALSE)  # important
-      file.append(commentsLogFile(), commentsFile())    
-      write.csv(cm, commentsFile(), row.names=FALSE)
+      #cm <- comments()
+      saved_state <- input$commentsTable_state
+      saved_page <- (saved_state$start / saved_state$length) + 1
+      
+      sanitised <- lapply(input$videoR.markers, 
+                      function(a) { lapply(a, function(b){ if(is.null(b)) NA else b })})
+      timeA <- unlist(sanitised$timeA)
+      timeB <- unlist(sanitised$timeB)
+      type <- unlist(sanitised$type)
+      colour <- unlist(sanitised$colour)
+      comment <- unlist(sanitised$comment)
 
+      cm <- data.frame("timeA"=as.numeric(safeHMS(timeA)), "timeB"=as.numeric(safeHMS(timeB)),
+                       "type"=type,"colour"=colour,
+                       "comment"=comment)
+      
+      cm <- cm[order(cm$timeA),]
+      # cm <- merge(cm, data.frame("timeA"=timeA, "timeB"=timeB,
+      #                            "type"=type,"colour"=colour,
+      #                            "comment"=comment),
+      #             by=c("timeA","type","colour","comment"), all=TRUE, sort=TRUE)
+      
+      #replaceData(commentsProxy, cm, resetPaging = FALSE)  # important
+      
+      file.append(commentsLogFile(), commentsFile())    
+      write.csv(cm, commentsFile(), quote = FALSE, row.names=FALSE)
+      selectPage(commentsProxy,saved_page)
   })
   
 
@@ -218,8 +272,8 @@ server <- function(input, output, session) {
       class = "display nowrap compact", # style
       editable = TRUE,
       selection = 'single',
-      colnames = c("Time", "Comment"),
-      options = list(autoWidth = TRUE, stateSave = TRUE)
+      colnames = c("Time In", "Time Out", "Type", "Colour", "Comment"),
+      options = list(pageLength = 25, autoWidth = TRUE, stateSave = TRUE)
   )
   
   
