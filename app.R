@@ -10,7 +10,7 @@
 library(shiny)
 library(shinyjs)
 library(DT)
-library(videoR)
+library(spectR)
 library(hms)
 #source('R/audio_analysis.R')
 
@@ -46,7 +46,7 @@ ui <- fluidPage(
     column(8, # The left 2/3 of the page
       fluidRow(
         column(12,
-          videoR::videoROutput("videoScreen")),
+          spectR::spectROutput("videoScreen")),
         column(6, DT::dataTableOutput("avrecordsTable")),
         column(6, 
           fluidRow(
@@ -111,6 +111,16 @@ server <- function(input, output, session) {
     #paste0('http://localhost:8080/www/data/', rec,'/',rec, '.mp4')
   })
 
+  spectrogramDir <- reactive({
+    rec <- selectedAVRecord()
+    paste0('https://offig.net/video/bees/', rec)
+  })
+  
+  spectrogramBaseName <- reactive({
+    rec <- selectedAVRecord()
+    rec
+  })
+  
   parseComments <- function(somefile) {
     if (file.exists(somefile)) {
       data <- read.csv(somefile, header=TRUE, stringsAsFactors = FALSE)
@@ -226,7 +236,7 @@ server <- function(input, output, session) {
   })
   
   
-  observeEvent(input$videoR.markers, {
+  observeEvent(input$spectR.markers, {
     
     #new_data <- data.frame("seconds.into.showreel"=input$markers$time, "comment"=input$markers$comment)
     #str(unlist(input$markers$time))
@@ -235,7 +245,7 @@ server <- function(input, output, session) {
       saved_state <- input$commentsTable_state
       saved_page <- (saved_state$start / saved_state$length) + 1
       
-      sanitised <- lapply(input$videoR.markers, 
+      sanitised <- lapply(input$spectR.markers, 
                       function(a) { lapply(a, function(b){ if(is.null(b)) NA else b })})
       timeA <- unlist(sanitised$timeA)
       timeB <- unlist(sanitised$timeB)
@@ -288,7 +298,13 @@ server <- function(input, output, session) {
   )
   
   
-  output$videoScreen <- renderVideoR(videoR("videoURL"=videoFile(), "videoName"="showreel", "videoMarkers"=isolate(markers())))
+  output$videoScreen <- renderspectR(spectR("mediaURL"=videoFile(), "mediaName"="showreel", "mediaHasVideo"=TRUE,
+                                            "spectrogramDir"=spectrogramDir(), "spectrogramBaseName"=spectrogramBaseName(), 
+                                            "spectrogramHeight"=512, "mediaMarkers"=isolate(markers())))
+  
+  # spectR <- function(mediaURL, mediaName, mediaHasVideo,
+  #                    spectrogramDir, spectrogramBaseName, spectrogramHeight,
+  #                    mediaMarkers=NULL, width = NULL, height = NULL, elementId = NULL)
   
   #observeEvent(input$saveComments, {
   #  write.csv(comments,"www/comments.csv")  # toggle is a shinyjs function
