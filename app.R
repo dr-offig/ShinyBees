@@ -23,6 +23,9 @@ library(hms)
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
+  tags$head(
+    tags$meta(property='Content-Security-Policy', content='upgrade-insecure-requests')),
+    
   #tags$script(src = "video_controls.js"),
   tags$style(HTML("video {
     width: 100%    !important;
@@ -44,21 +47,22 @@ ui <- fluidPage(
   # 
   fluidRow(   
     column(8, # The left 2/3 of the page
+      spectR::spectROutput("videoScreen")),
+    column(4, 
       fluidRow(
-        column(12,
-          spectR::spectROutput("videoScreen")),
-        column(6, DT::dataTableOutput("avrecordsTable")),
-        column(6, 
-          fluidRow(
-            column(5,
-              textInput("defaultComment", label="Default comment", value="--")),
-            column(5,
-                   selectInput("defaultColour", label="Default colour", 
-                               choices=c("indianred","darkgreen","darkslateblue","hotpink"))),
-            column(2, actionButton("deleteSelectedRow","Delete"))
-          )))),
-    column(4, DT::dataTableOutput("commentsTable"))
-  )  
+         column(12, DT::dataTableOutput("commentsTable"))),
+      fluidRow(
+         column(12, DT::dataTableOutput("avrecordsTable"))),
+      fluidRow(
+         column(5,
+            textInput("defaultComment", label="Default comment", value="--")),
+         column(5,
+            selectInput("defaultColour", label="Default colour", 
+                                choices=c("indianred","darkgreen","darkslateblue","hotpink"))),
+         column(2, actionButton("deleteSelectedRow","Delete"))
+      )
+    )
+  )
 )
 
 # Define server logic required to draw a histogram
