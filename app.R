@@ -12,6 +12,8 @@ library(shinyjs)
 library(DT)
 library(spectR)
 library(hms)
+library(av)
+
 #source('R/audio_analysis.R')
 
 # registerInputHandler("videoR.markers",
@@ -20,7 +22,11 @@ library(hms)
 #     lapply(x, function(a) { lapply(a, function(b){ if(is.null(b)) NA else b })})
 #   })
 
-# Define UI for application that draws a histogram
+
+# globals
+embeddingMountPoint <- "/home/ybot/code/R/Bees/www"
+embeddingURL <- "https://offig.net/bees"
+
 ui <- fluidPage(
   
   tags$head(
@@ -111,19 +117,29 @@ server <- function(input, output, session) {
   
   videoFile <- reactive({
     rec <- selectedAVRecord()
-    paste0('https://offig.net/video/bees/', rec, '.mp4')
+    paste0(rec,'/',rec,'.mp4')
+    #paste0('https://bees.offig.net/',rec,'/',rec,'.mp4')
     #paste0('http://localhost:8080/www/data/', rec,'/',rec, '.mp4')
   })
 
-  spectrogramDir <- reactive({
+  spectRelativeDir <- reactive({
     rec <- selectedAVRecord()
-    paste0('https://offig.net/video/bees/', rec)
+    paste0(rec,'/',rec,'_SPECT')
+    #paste0('https://bees.offig.net/',rec,'/',rec,'_SPECT')
   })
   
   spectrogramBaseName <- reactive({
     rec <- selectedAVRecord()
-    rec
+    paste0(rec,'_SPECT')
   })
+  
+  mediaHasVideo <- reactive({
+    rec <- selectedAVRecord()
+    fpath <- paste0('www/data/',rec,'/',rec,'.mp4')
+    info <- av::av_video_info(fpath)
+    !is.null(info$video)
+  })
+  
   
   parseComments <- function(somefile) {
     if (file.exists(somefile)) {
@@ -301,10 +317,19 @@ server <- function(input, output, session) {
                    columnDefs = list(list(width = '100px', targets = c(0))))
   )
   
-  
-  output$videoScreen <- renderspectR(spectR("mediaURL"=videoFile(), "mediaName"="showreel", "mediaHasVideo"=TRUE,
-                                            "spectrogramDir"=spectrogramDir(), "spectrogramBaseName"=spectrogramBaseName(), 
-                                            "spectrogramHeight"=512, "mediaMarkers"=isolate(markers())))
+  #spectR <- function(embeddingURL, embeddingMountPoint, mediaRelativePath, mediaName, mediaHasVideo,
+  #                   spectRelativeDir, spectrogramBaseName, spectrogramHeight,
+  #                   mediaMarkers=NULL, width = NULL, height = NULL, elementId = NULL)
+    
+  output$videoScreen <- renderspectR(spectR("embeddingURL"=embeddingURL, 
+                                            "embeddingMountPoint" = embeddingMountPoint,
+                                            "mediaRelativePath" = paste0("data/",videoFile()),
+                                            "mediaName" = "showreel",
+                                            "mediaHasVideo"=TRUE,
+                                            "spectRelativeDir"=paste0("data/",spectRelativeDir()), 
+                                            "spectrogramBaseName"=spectrogramBaseName(), 
+                                            "spectrogramHeight"=512, 
+                                            "mediaMarkers"=isolate(markers())))
   
   # spectR <- function(mediaURL, mediaName, mediaHasVideo,
   #                    spectrogramDir, spectrogramBaseName, spectrogramHeight,
