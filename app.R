@@ -22,10 +22,14 @@ library(av)
 #     lapply(x, function(a) { lapply(a, function(b){ if(is.null(b)) NA else b })})
 #   })
 
+# default media server - assumes you have setup a file server on port 8080
+mediaServerRootDir <- "./www"  # don't put a forward-slash at the end of the directory path
+mediaServerURL <- "localhost:8080"
 
-# globals
-embeddingMountPoint <- "/home/ybot/code/R/Bees/www"
-embeddingURL <- "https://offig.net/bees"
+# override with config file if present
+if(file.exists('R/media_server_config.R'))
+  source('R/media_server_config.R')
+
 
 ui <- fluidPage(
   
@@ -317,12 +321,9 @@ server <- function(input, output, session) {
                    columnDefs = list(list(width = '100px', targets = c(0))))
   )
   
-  #spectR <- function(embeddingURL, embeddingMountPoint, mediaRelativePath, mediaName, mediaHasVideo,
-  #                   spectRelativeDir, spectrogramBaseName, spectrogramHeight,
-  #                   mediaMarkers=NULL, width = NULL, height = NULL, elementId = NULL)
-    
-  output$videoScreen <- renderspectR(spectR("embeddingURL"=embeddingURL, 
-                                            "embeddingMountPoint" = embeddingMountPoint,
+  
+  output$videoScreen <- renderspectR(spectR("mediaServerURL"=mediaServerURL, 
+                                            "mediaServerRootDir" = mediaServerRootDir,
                                             "mediaRelativePath" = paste0("data/",videoFile()),
                                             "mediaName" = "showreel",
                                             "mediaHasVideo"=TRUE,
