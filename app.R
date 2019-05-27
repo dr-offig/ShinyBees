@@ -78,7 +78,7 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
   
-  avrecords <- data.frame(recordname = list.dirs('www/data',recursive=FALSE,full.names=FALSE), stringsAsFactors = FALSE)
+  avrecords <- data.frame(recordname = list.dirs(paste0(mediaServerRootDir,'/data'),recursive=FALSE,full.names=FALSE), stringsAsFactors = FALSE)
   #avrecord <- avrecords[[1]]
   
   # utility functions
@@ -111,12 +111,12 @@ server <- function(input, output, session) {
   
   commentsFile <- reactive({
     rec <- selectedAVRecord()
-    paste0('www/data/',rec,'/',rec,'.csv')
+    paste0(mediaServerRootDir,'/data/',rec,'/',rec,'.csv')
   })
 
   commentsLogFile <- reactive({
     rec <- selectedAVRecord()
-    paste0('www/data/',rec,'/',rec,'_log.csv')
+    paste0(mediaServerRootDir,'/data/',rec,'/',rec,'_log.csv')
   })
   
   videoFile <- reactive({
@@ -139,7 +139,7 @@ server <- function(input, output, session) {
   
   mediaHasVideo <- reactive({
     rec <- selectedAVRecord()
-    fpath <- paste0('www/data/',rec,'/',rec,'.mp4')
+    fpath <- paste0(mediaServerRootDir,'/data/',rec,'/',rec,'.mp4')
     info <- av::av_video_info(fpath)
     !is.null(info$video)
   })
@@ -332,9 +332,9 @@ server <- function(input, output, session) {
                                             "spectrogramHeight"=512, 
                                             "mediaMarkers"=isolate(markers())))
   
-  # spectR <- function(mediaURL, mediaName, mediaHasVideo,
-  #                    spectrogramDir, spectrogramBaseName, spectrogramHeight,
-  #                    mediaMarkers=NULL, width = NULL, height = NULL, elementId = NULL)
+  #spectR <- function(mediaServerURL, mediaServerRootDir, mediaRelativePath, mediaName, mediaHasVideo,
+  #                   spectRelativeDir, spectrogramBaseName, spectrogramHeight,
+  #                   mediaMarkers=NULL, width = NULL, height = NULL, elementId = NULL)
   
   #observeEvent(input$saveComments, {
   #  write.csv(comments,"www/comments.csv")  # toggle is a shinyjs function
