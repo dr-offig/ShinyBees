@@ -23,13 +23,8 @@ library(av)
 #   })
 
 # default media server - assumes you have setup a file server on port 8080
-mediaServerRootDir <- "./www"  # don't put a forward-slash at the end of the directory path
-mediaServerURL <- "localhost:8080"
-
-# override with config file if present
-if(file.exists('R/media_server_config.R'))
-  source('R/media_server_config.R')
-
+mediaServerRootDir <- "/home/ybot/code/R/Bees/www"
+mediaServerURL <- "https://offig.net/bees"
 
 ui <- fluidPage(
   
@@ -332,13 +327,6 @@ server <- function(input, output, session) {
                                             "spectrogramHeight"=512, 
                                             "mediaMarkers"=isolate(markers())))
   
-  #spectR <- function(mediaServerURL, mediaServerRootDir, mediaRelativePath, mediaName, mediaHasVideo,
-  #                   spectRelativeDir, spectrogramBaseName, spectrogramHeight,
-  #                   mediaMarkers=NULL, width = NULL, height = NULL, elementId = NULL)
-  
-  #observeEvent(input$saveComments, {
-  #  write.csv(comments,"www/comments.csv")  # toggle is a shinyjs function
-  #})
 }
 
 # Run the application 
