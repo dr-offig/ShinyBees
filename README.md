@@ -15,7 +15,8 @@ $ git clone https://github.com/dr-offig/ShinyBees.git
 > install.packages("shiny")  
 > install.packages(c("DT", "hms", "shinyjs"))  
 > devtools::install_github("dr-offig/listenR")  
-> devtools::install_github("dr-offig/videoR")  
+> devtools::install_github("dr-offig/videoR")
+> devtools::install_github("dr-offig/spectR")
 ```
   
 ### 3. Setup at least one media directory in `/path/to/Rproject/www/data/`  
