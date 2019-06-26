@@ -14,13 +14,24 @@ library(spectR)
 library(hms)
 library(av)
 
-#source('R/audio_analysis.R')
+options(shiny.maxRequestSize = 5000000000)
 
-# registerInputHandler("videoR.markers",
-#   function(x, session, inputname) 
-#   { 
-#     lapply(x, function(a) { lapply(a, function(b){ if(is.null(b)) NA else b })})
-#   })
+## Utilities ##
+mainIdentifier <- function(path) {
+  tokens <- unlist(strsplit(path,"[/]"))
+  bits <- unlist(strsplit(tokens[[length(tokens)]],"[.]"))
+  paste0(bits[1:(length(bits)-1)],collapse = ".")
+}
+
+directoryOfFile <- function(path) {
+  tokens <- unlist(strsplit(path,"[/]"))
+  paste0(tokens[1:(length(tokens)-1)],collapse="/")
+}
+
+correspondingWavFilename <- function(path) {
+  paste0(directoryOfFile(path), "/" , mainIdentifier(path), ".wav")
+}
+
 
 # default media server - assumes you have setup a file server on port 8080
 mediaServerRootDir <- "/home/ybot/code/R/Bees/www"
@@ -65,6 +76,12 @@ ui <- fluidPage(
             selectInput("defaultColour", label="Default colour", 
                                 choices=c("indianred","darkgreen","darkslateblue","hotpink"))),
          column(2, actionButton("deleteSelectedRow","Delete"))
+      ),
+      fluidRow(
+        column(12,
+               fileInput("fileUpload", "upload", multiple = TRUE, accept = c("video/mp4", "audio/wav"),
+                         width = '80%', buttonLabel = "Browse...",
+                         placeholder = "No file selected"))
       )
     )
   )
@@ -295,6 +312,15 @@ server <- function(input, output, session) {
   #   #selectPage(commentsProxy,input$selectedPage)
   # })
   #  
+  
+  observeEvent(input$fileUpload, {
+    print(input$fileUpload$datapath)
+    newrec <- mainIdentifier(input$fileUpload$datapath)
+    newDir <- paste0(mediaServerRootDir, "/", newrec)
+    suppressWarnings(dir.create(newDir, recursive=TRUE))
+    newFile <- paste0(newDir,"/",newrec,".mp4")
+    file.copy(input$fileUpload$datapath, newFile)
+  })
   
   output$commentsTable <- renderDT(
       comments(), # data
