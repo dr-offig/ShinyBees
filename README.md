@@ -19,10 +19,10 @@ $ git clone https://github.com/dr-offig/ShinyBees.git
 > devtools::install_github("dr-offig/spectR")
 ```
   
-### 3. Setup at least one media directory in `/path/to/Rproject/www/data/`  
+### 3. Setup at least one media directory in `/path/to/data`  
 The media directory needs to have the following structure:  
 ```console
-www/data/medialabel/  
+path/to/data/medialabel/  
     |-- medialabel.mp4
     |-- medialabel.wav
     |-- medialabel.csv
